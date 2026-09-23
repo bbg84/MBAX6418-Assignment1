@@ -179,3 +179,9 @@ Saved outputs are in `outputs/`. The reusable prompt is
 To use the code you would provide your own endpoint settings in a local `.env`
 (not committed). The Amazon dataset is downloaded separately and kept out of the
 repository.
+
+- The **NRC Emotion Lexicon** file `NRC-Emotion-Lexicon-Wordlevel-v0.92.txt`
+  should be downloaded and placed at
+  `data/nrc/NRC-Emotion-Lexicon-Wordlevel-v0.92.txt`.
+- The project uses only the **Python 3 standard library**, so no third-party
+  `pip` packages are required.

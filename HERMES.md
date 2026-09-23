@@ -26,6 +26,13 @@ developer tools. Hermes therefore handles the technical work.
   important outputs.
 - **Reproducibility throughout:** fixed samples, fixed random seeds where
   appropriate, and saved outputs that support any numbers we eventually report.
+- **Distinguish requirements from decisions.** If the assignment or course
+  materials explicitly specify what must be done, follow that requirement
+  without asking me to choose unnecessarily. If the assignment explicitly asks
+  me to decide, use my judgment, choose an approach, or make a
+  subjective/design decision, stop at that point, explain the relevant options
+  in plain English, and ask me before proceeding. Do not silently make
+  decisions that the assignment expects me to make.
 
 ## Data / Modeling Rules
 

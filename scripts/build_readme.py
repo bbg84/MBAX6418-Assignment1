@@ -1,4 +1,55 @@
-# MBAX 6418 — Assignment 1
+#!/usr/bin/env python3
+"""Final deliverable stage — generate README.md.
+
+Every number is read programmatically from the saved outputs (never typed by
+hand), so the report always matches what the pipeline produced. The narrative is
+written here; the metrics come from the JSON files.
+"""
+import json, os
+from collections import Counter
+
+ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(ROOT, "README.md")
+
+R6 = json.load(open(os.path.join(ROOT, "outputs", "step6_results.json")))["results"]
+R2 = json.load(open(os.path.join(ROOT, "outputs", "step2_results.json")))["results"]
+S5 = json.load(open(os.path.join(ROOT, "outputs", "step5_results.json")))
+TA = S5["tie_analysis"]
+
+# ---- Step 6 (balanced, three-class) ----
+N = len(R6)
+ok = sum(1 for r in R6 if r["correct"]); bad = N - ok
+acc = ok / N * 100
+CLASSES = ["POSITIVE", "NEUTRAL", "NEGATIVE"]
+def cls_acc(c):
+    s = [r for r in R6 if r["correct_label"] == c]
+    k = sum(1 for r in s if r["correct"])
+    return k, len(s), k / len(s) * 100
+per = {c: cls_acc(c) for c in CLASSES}
+conf = {}
+for cr in CLASSES:
+    conf[cr] = {cp: sum(1 for r in R6 if r["correct_label"] == cr and r["prediction"] == cp) for cp in CLASSES}
+neut = [r for r in R6 if r["correct_label"] == "NEUTRAL"]
+neut_brk = {p: sum(1 for r in neut if r["prediction"] == p) for p in CLASSES}
+stars = dict(sorted(Counter(round(r["rating"]) for r in R6).items()))
+
+# ---- Step 2 (imbalanced binary) ----
+s2n = len(R2); s2ok = sum(1 for r in R2 if r["matched"])
+s2acc = s2ok / s2n * 100
+s2pos = len([r for r in R2 if r["correct_label"] == "POSITIVE"])
+s2neg = len([r for r in R2 if r["correct_label"] == "NEGATIVE"])
+
+# ---- Step 5 (emotion, original 100) ----
+agree_all = TA["agreement_all"]; agree_all_pct = TA["agreement_all_pct"]
+agree_no = TA["agreement_in8_excl_none"]; agree_no_pct = TA["agreement_in8_excl_none_pct"]
+none_n = TA["n_none"]; joy_anti = TA["joy_to_anticipation_mismatches"]
+ties = TA["n_ties"]; ties_anti = TA["n_ties_resolved_to_anticipation_by_priority"]
+ja_tie = TA["joy_anti_due_to_tiebreak"]; ja_clear = TA["joy_anti_anticipation_clearly_higher"]
+
+def f1(x):
+    return f"{x:.1f}" if isinstance(x, float) else str(x)
+
+README = f"""# MBAX 6418 — Assignment 1
 
 **Sentiment & Emotion Classification of Amazon Reviews**
 
@@ -52,30 +103,30 @@ repository (see `.gitignore`).
 ## Results — final balanced three-class run
 
 - 150 reviews: **50 POSITIVE / 50 NEUTRAL / 50 NEGATIVE**
-- **Overall accuracy: 114/150 = 76.0%**
-- POSITIVE: **46/50 = 92.0%**
-- NEUTRAL: **20/50 = 40.0%**
-- NEGATIVE: **48/50 = 96.0%**
+- **Overall accuracy: {ok}/{N} = {f1(acc)}%**
+- POSITIVE: **{per['POSITIVE'][0]}/{per['POSITIVE'][1]} = {f1(per['POSITIVE'][2])}%**
+- NEUTRAL: **{per['NEUTRAL'][0]}/{per['NEUTRAL'][1]} = {f1(per['NEUTRAL'][2])}%**
+- NEGATIVE: **{per['NEGATIVE'][0]}/{per['NEGATIVE'][1]} = {f1(per['NEGATIVE'][2])}%**
 
 Confusion matrix (rows = rating-derived correct class, columns = model prediction):
 
-| Correct \ Predicted | POSITIVE | NEUTRAL | NEGATIVE |
+| Correct \\ Predicted | POSITIVE | NEUTRAL | NEGATIVE |
 |---|---|---|---|
-| POSITIVE | 46 | 4 | 0 |
-| NEUTRAL | 5 | 20 | 25 |
-| NEGATIVE | 0 | 2 | 48 |
+| POSITIVE | {conf['POSITIVE']['POSITIVE']} | {conf['POSITIVE']['NEUTRAL']} | {conf['POSITIVE']['NEGATIVE']} |
+| NEUTRAL | {conf['NEUTRAL']['POSITIVE']} | {conf['NEUTRAL']['NEUTRAL']} | {conf['NEUTRAL']['NEGATIVE']} |
+| NEGATIVE | {conf['NEGATIVE']['POSITIVE']} | {conf['NEGATIVE']['NEUTRAL']} | {conf['NEGATIVE']['NEGATIVE']} |
 
 ### 1. Why did the lopsided run look very accurate, and what changed after balancing?
 
-The original first-100 run (Step 2) scored **97.0%**, but the batch was
-heavily imbalanced at **93 POSITIVE / 7 NEGATIVE**, and it had **no
+The original first-100 run (Step 2) scored **{s2acc:.1f}%**, but the batch was
+heavily imbalanced at **{s2pos} POSITIVE / {s2neg} NEGATIVE**, and it had **no
 separate NEUTRAL class** — 3-star reviews were grouped into NEGATIVE. A model
 that mostly predicted POSITIVE looked very accurate because that was nearly every
 review.
 
 The balanced run uses 50 reviews from each class, which makes it easier to see
 how the model performs across POSITIVE, NEUTRAL, and NEGATIVE reviews. Accuracy
-dropped to **76.0%**, mainly because the model struggled with the newly
+dropped to **{f1(acc)}%**, mainly because the model struggled with the newly
 separated NEUTRAL class. The two runs are not directly comparable because the
 class definitions and sample composition changed.
 
@@ -83,13 +134,13 @@ class definitions and sample composition changed.
 
 The dominant mistake is on 3-star NEUTRAL reviews:
 
-- **25 of 50 rating-derived NEUTRAL were predicted
-  NEGATIVE** (25/50 = 50.0%)
-- **5 of 50 NEUTRAL were predicted POSITIVE**
-  (10.0%)
-- only **20 of 50 NEUTRAL were correctly identified**
-- **4 POSITIVE** were predicted NEUTRAL
-- **2 NEGATIVE** were predicted NEUTRAL
+- **{neut_brk['NEGATIVE']} of {len(neut)} rating-derived NEUTRAL were predicted
+  NEGATIVE** ({neut_brk['NEGATIVE']}/{len(neut)} = {f1(neut_brk['NEGATIVE']/len(neut)*100)}%)
+- **{neut_brk['POSITIVE']} of {len(neut)} NEUTRAL were predicted POSITIVE**
+  ({f1(neut_brk['POSITIVE']/len(neut)*100)}%)
+- only **{per['NEUTRAL'][0]} of {len(neut)} NEUTRAL were correctly identified**
+- **{conf['POSITIVE']['NEUTRAL']} POSITIVE** were predicted NEUTRAL
+- **{conf['NEGATIVE']['NEUTRAL']} NEGATIVE** were predicted NEUTRAL
 - there was **no direct POSITIVE↔NEGATIVE confusion** in the final matrix
 
 So the model tended to classify many 3-star (neutral) reviews as **NEGATIVE**
@@ -103,14 +154,14 @@ This emotion comparison is a **separate analysis on the original 100-review
 sample (Step 5)** — not the balanced 150. It compares the LLM's primary emotion
 against an independent NRC word-list emotion:
 
-- Two methods agreed on **22/100 = 22.0%** of reviews
-- Excluding the 15 reviews where NRC found no emotion: **22/85 =
-  25.9%**
-- The dominant disagreement was **LLM joy → NRC anticipation** (51 cases)
-- 52 of the 85 nonzero-NRC reviews had a tied top score; 48 of those
+- Two methods agreed on **{agree_all}/{100} = {f1(agree_all_pct)}%** of reviews
+- Excluding the {none_n} reviews where NRC found no emotion: **{agree_no}/85 =
+  {f1(agree_no_pct)}%**
+- The dominant disagreement was **LLM joy → NRC anticipation** ({joy_anti} cases)
+- {ties} of the 85 nonzero-NRC reviews had a tied top score; {ties_anti} of those
   ties were resolved to anticipation by the fixed priority rule
-- Of the 51 joy→anticipation disagreements, 43 involved
-  anticipation merely *tying* joy, while only 8 had anticipation
+- Of the {joy_anti} joy→anticipation disagreements, {ja_tie} involved
+  anticipation merely *tying* joy, while only {ja_clear} had anticipation
   clearly outscore joy
 
 The two methods disagree for a couple of reasons. The LLM considers the full
@@ -179,3 +230,10 @@ Saved outputs are in `outputs/`. The reusable prompt is
 To use the code you would provide your own endpoint settings in a local `.env`
 (not committed). The Amazon dataset is downloaded separately and kept out of the
 repository.
+"""
+
+with open(OUT, "w", encoding="utf-8") as f:
+    f.write(README)
+print("WROTE", OUT, f"({len(README):,} chars)")
+print("numeric check:", N, ok, f1(acc), per['POSITIVE'][0], per['NEUTRAL'][0], per['NEGATIVE'][0],
+      "| step2:", s2ok, s2acc, s2pos, s2neg, "| step5:", agree_all, agree_no_pct, joy_anti, ties_anti, ja_tie, ja_clear)

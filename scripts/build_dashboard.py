@@ -157,7 +157,7 @@ TEMPLATE = r"""<!DOCTYPE html>
 <body>
 <script type="application/json" id="app-data">__DATA_JSON__</script>
 <div class="wrap">
-  <header>
+  <header id="top">
     <p class="eyebrow">MBAX 6418 · Assignment 1 · Final Dashboard</p>
     <h1>Amazon Gift Card Review Sentiment &amp; Emotion</h1>
     <p class="sub">A balanced <b>150-review</b> three-class analysis — how well an LLM classifies each review as <b class="pos">POSITIVE</b>, <b class="neut">NEUTRAL</b>, or <b class="neg">NEGATIVE</b>, checked against a label derived from the star rating.</p>
@@ -183,7 +183,7 @@ TEMPLATE = r"""<!DOCTYPE html>
     </div>
   </section>
 
-  <section class="card" style="margin-top:16px">
+  <section class="card" style="margin-top:16px" id="confusion">
     <h2>Correct label vs. model prediction (3×3 confusion)</h2>
     <p class="lead">Rows are the rating-derived correct class; columns are what the model predicted. Green = correct. The NEUTRAL row shows the model's trouble: <b>25 of 50 neutral reviews were called NEGATIVE</b>.</p>
     <div class="cmat-wrap">

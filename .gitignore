@@ -1,0 +1,96 @@
+# ===== Secrets & credentials =====
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+token.json
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+.mypy_cache/
+.dmypy.json
+.pyre/
+.pyc/
+.pyd
+.pyo
+
+# ===== Virtual environments =====
+.env/
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*/
+virtualenv*/ 
+
+# ===== Jupyter Notebooks (output only) =====
+.ipynb_checkpoints/
+*_nbconvert_*/
+profile_default/
+ipython_config.py
+
+# ===== Data files (large Amazon dataset — never commit) =====
+data/
+*.csv
+*.tsv
+*.jsonl
+*.json.gz
+*.parquet
+*.feather
+*.arrow
+*.orc
+!data/README.md
+!*.example.csv
+
+# ===== Temporary files =====
+tmp/
+temp/
+*.tmp
+*.temp
+*.log
+*.bak
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+
+# ===== IDE / editor =====
+.idea/
+.vscode/
+*.code-workspace
+.project
+.settings/
+.classpath
+
+# ===== Miscellaneous =====
+.hermes/
+.history/
+*.pid
+*.seed
+*.lock

@@ -90,3 +90,42 @@ Each entry: what happened, the cause, and how we worked around it.
   gift card nothing to show sorry", Step 2 NEGATIVE → Step 5 POSITIVE. This is
   the same ambiguous review flagged in the Step 1 spot-check; the new prompt
   changed how it was judged. Flagged, not hidden; nothing overwrote Step 2 data.
+
+## 7. Emotion format violations on the three-class run (Step 6) — RESOLVED via constrained decoding
+
+- **Symptom:** on the 150-review balanced run, the LLM sometimes returned an
+  emotion outside the approved 8 — specifically `disappointment` and
+  `frustration` (near-synonyms of sadness/anger).
+- **What did NOT fully work:** strengthening
+  `prompts/sentiment_threeclass_prompt.txt` to forbid synonyms. Across re-runs
+  the violation count moved 8 -> 3 -> 5; the LLM deterministically re-emitted
+  the two banned words on genuinely disappointing reviews, and rewording also
+  drifted unrelated sentiment predictions run-to-run (111 -> 112 -> 113).
+- **Resolution (chosen by user): constrained decoding.** The course endpoint
+  supports `response_format` with a JSON schema and enums (OpenAI structured
+  outputs style). We switched the prompt's response format to a single JSON
+  object and send
+  `response_format={"type":"json_schema", "json_schema":{schema with sentiment
+  enum {POSITIVE,NEUTRAL,NEGATIVE} and emotion enum {the 8}}}`. This enforces
+  valid labels at decode time. Final run: 0 format violations — all 150
+  sentiment in the 3 classes and all 150 emotion in the 8.
+- **Note on history:** the earlier runs and their violation counts are kept in
+  `outputs/step6_results.json` under settings.run_history (the parsed emotion
+  value there shows None for violations; the raw banned labels
+  disappointment/frustration are documented here). No output was ever silently
+  remapped.
+- **Metrics drift from the fix:** final overall accuracy is 76.0% (114/150),
+  and only a handful of sentiment predictions differ from the original run
+  (e.g. 3 differ from the immediately-prior run). The final numbers below are
+  the authoritative ones.
+
+## 8. Balanced three-class run key finding (Step 6)
+
+- Imbalanced first-100 run (93 POSITIVE / 7 NEGATIVE, Step 2 binary) looked
+  near-perfect (97%). The balanced 150 (50/50/50 incl. NEUTRAL) drops to 74%
+  overall: POSITIVE 88%, NEGATIVE 96%, NEUTRAL only 38%.
+- 3-star NEUTRAL reviews are largely NOT recognized as their own class: of 50,
+  only 19 (38%) predicted NEUTRAL; 26 (52%) collapse into NEGATIVE and 5 (10%)
+  into POSITIVE.
+- So the balanced run reveals the model is much weaker than the lopsided run
+  suggested, and 3-star reviews mostly read as negative rather than neutral.

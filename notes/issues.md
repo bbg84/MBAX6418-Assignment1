@@ -26,3 +26,39 @@ Each entry: what happened, the cause, and how we worked around it.
   endpoint-call parameters.
 - **Lesson for the project:** always disable thinking for this endpoint when we
   want a bare classification token.
+
+## 2. Invisible bar fills (Step 3, found during user Chrome review)
+
+- **When:** Step 3 dashboard, first browser review.
+- **Symptom:** "Correct vs. incorrect" and "Performance by class" bars appeared
+  as empty light-gray tracks; the colored fills were invisible.
+- **Cause:** The fill was a `<span>`. Inline-level elements ignore `width` and
+  `height` in Chrome, so the `width:X%` never applied and the fill never grew.
+- **Fix:** Set `display:block` on both the track and the fill so the CSS width
+  is honored; made tracks bordered/contrasting and fills `min-width:4px` so the
+  small 3% bar can't vanish.
+
+## 3. Donut center contradicted the chart (Step 3)
+
+- **When:** Step 3 review.
+- **Symptom:** The donut showed the 93/7 POSITIVE/NEGATIVE class split, but its
+  center read "97.0% accurate" — a different metric, so the chart misled.
+- **Fix:** Center now summarizes the class split shown: "93.0% POSITIVE /
+  7.0% NEGATIVE". Accuracy remains in the KPI cards where it belongs. "Mismatch"
+  was also removed from the class legend (it is not a distribution slice) and
+  shown separately.
+
+## 4. Couldn't verify live clicks in the Hermes preview pane (Step 4)
+
+- **When:** Step 4 filtering verification.
+- **Symptom:** Clicking a filter in the preview-pane file tab did not show up in
+  the pane's captured text — the snapshot stayed at the initial 100-row render.
+- **Cause:** The preview pane's file-tab text reader returns a render-time
+  snapshot and wasn't reflecting later DOM state changes from programmatic
+  clicks; this is a tooling limitation, not a dashboard bug.
+- **Fix / verification:** Exported the dashboard's actual `applyFilters` +
+  click-wiring into a DOM-simulation harness in Node and drove the real click
+  handlers there. Verified: All=100, Correct=97, Mismatched=3, rating-derived
+  NEGATIVE=7, combined Mismatched+rating-derived POSITIVE=2, keyword "awesome"=3,
+  reset=100 (with the search box cleared). The user confirmed the filters
+  interactively in Chrome.

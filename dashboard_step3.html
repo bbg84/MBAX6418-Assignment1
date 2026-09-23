@@ -69,6 +69,20 @@
   .celltext .b{color:var(--muted);font-size:12.5px;display:block;margin-top:2px;max-height:3em;overflow:hidden}
   .foot{color:var(--muted);font-size:12px;margin-top:32px;line-height:1.6}
   .note{font-size:12px;color:var(--muted)}
+  .filterbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px;margin:14px 0;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:12px}
+  .fgroup{display:flex;flex-direction:column;gap:6px}
+  .fgroup.grow{flex:1;min-width:180px}
+  .flabel{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .seg{display:flex;gap:4px;flex-wrap:wrap}
+  .seg button{font:inherit;font-size:12.5px;font-weight:600;padding:6px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted);cursor:pointer}
+  .seg button:hover{border-color:var(--accent);color:var(--accent)}
+  .seg button.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  #kw{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);min-width:160px}
+  #kw:focus{outline:none;border-color:var(--accent)}
+  .fcount{font-size:13px;color:var(--muted);align-self:center;white-space:nowrap}
+  .fcount b{color:var(--text);font-size:15px}
+  .reset{font:inherit;font-size:12.5px;font-weight:600;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--accent);cursor:pointer;white-space:nowrap}
+  .reset:hover{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
   @media(max-width:760px){.grid.kpis{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}.bar-row .bl{width:110px}}
 </style>
 </head>
@@ -115,6 +129,38 @@
   <section class="card" style="margin-top:16px">
     <h2>Review-by-review detail</h2>
     <p class="lead">All <span id="totalN"></span> reviews scored — <span id="okN"></span> correct, <span id="badN"></span> mismatched.</p>
+    <div class="filterbar">
+      <div class="fgroup" data-role="verdict">
+        <span class="flabel">Verdict</span>
+        <div class="seg">
+          <button data-v="All" class="active">All</button>
+          <button data-v="Correct">Correct</button>
+          <button data-v="Mismatched">Mismatched</button>
+        </div>
+      </div>
+      <div class="fgroup" data-role="pred">
+        <span class="flabel">Model said</span>
+        <div class="seg">
+          <button data-p="All" class="active">All</button>
+          <button data-p="POSITIVE">POSITIVE</button>
+          <button data-p="NEGATIVE">NEGATIVE</button>
+        </div>
+      </div>
+      <div class="fgroup" data-role="derived">
+        <span class="flabel">Rating-derived</span>
+        <div class="seg">
+          <button data-d="All" class="active">All</button>
+          <button data-d="POSITIVE">POSITIVE</button>
+          <button data-d="NEGATIVE">NEGATIVE</button>
+        </div>
+      </div>
+      <div class="fgroup grow">
+        <span class="flabel">Search title / text</span>
+        <input id="kw" type="text" placeholder="Type a word…">
+      </div>
+      <div class="fcount">Showing <b id="shown">100</b> of 100 reviews</div>
+      <button id="resetBtn" class="reset">Show all 100</button>
+    </div>
     <div id="allTable"></div>
   </section>
 
@@ -203,13 +249,52 @@
   mh += bad.map(r=>`<tr><td><span class="badge ms">MISMATCH</span></td><td>${r.rating}</td><td>${badge(r.correct_label)}</td><td>${badge(r.model_prediction)}</td><td class="celltext full"><span class="t">${esc(r.title||'(no title)')}</span><span class="b">${esc(r.text||'(no text)')}</span></td></tr>`).join('');
   mism.innerHTML = mh + `</tbody></table>`;
 
-  const all = document.getElementById('allTable');
-  all.innerHTML = `<table><thead><tr><th>Rating</th><th>Correct label</th><th>Model said</th><th>Verdict</th><th>Review</th></tr></thead><tbody>` +
-    rows.map(rowEsc).join('') + `</tbody></table>`;
-
   document.getElementById('totalN').textContent = N;
   document.getElementById('okN').textContent = ok.length;
   document.getElementById('badN').textContent = bad.length;
+
+  // ---- Step 4: interactive filtering ----
+  function applyFilters(rws, f){
+    const q = (f.q||'').trim().toLowerCase();
+    return rws.filter(r=>{
+      if(f.verdict==='Correct' && !r.matched) return false;
+      if(f.verdict==='Mismatched' && r.matched) return false;
+      if(f.pred!=='All' && r.model_prediction!==f.pred) return false;
+      if(f.derived!=='All' && r.correct_label!==f.derived) return false;
+      if(q){ const blob=(r.title||'')+' '+(r.text||''); if(blob.toLowerCase().indexOf(q)===-1) return false; }
+      return true;
+    });
+  }
+  function renderRows(rs){
+    document.getElementById('allTable').innerHTML =
+      `<table><thead><tr><th>Rating</th><th>Correct label</th><th>Model said</th><th>Verdict</th><th>Review</th></tr></thead><tbody>`+
+      rs.map(rowEsc).join('')+`</tbody></table>`;
+  }
+  const state = {verdict:'All', pred:'All', derived:'All', q:''};
+  function update(){
+    const fr = applyFilters(rows, state);
+    document.getElementById('shown').textContent = fr.length;
+    renderRows(fr);
+  }
+  document.querySelectorAll('.filterbar .seg button').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const group = btn.closest('.fgroup'); const role = group.dataset.role;
+      if(role==='verdict') state.verdict = btn.dataset.v;
+      if(role==='pred') state.pred = btn.dataset.p;
+      if(role==='derived') state.derived = btn.dataset.d;
+      group.querySelectorAll('button').forEach(b=>b.classList.toggle('active', b===btn));
+      update();
+    });
+  });
+  document.getElementById('kw').addEventListener('input', e=>{ state.q = e.target.value; update(); });
+  document.getElementById('resetBtn').addEventListener('click', ()=>{
+    state.verdict='All'; state.pred='All'; state.derived='All'; state.q='';
+    document.getElementById('kw').value='';
+    document.querySelectorAll('.filterbar .seg button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.filterbar .seg').forEach(g=>g.querySelector('button').classList.add('active'));
+    update();
+  });
+  update();
 
   const s = D.settings;
   document.getElementById('foot').textContent =

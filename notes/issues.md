@@ -62,3 +62,31 @@ Each entry: what happened, the cause, and how we worked around it.
   NEGATIVE=7, combined Mismatched+rating-derived POSITIVE=2, keyword "awesome"=3,
   reset=100 (with the search box cleared). The user confirmed the filters
   interactively in Chrome.
+
+## 5. Step 5 coding bug fixed before running (undefined variable)
+
+- **When:** writing `scripts/score_nrc.py`.
+- **Symptom:** `primary()` returned `"NONE"` (a string) in one branch and a
+  `(chosen, counts)` tuple in the other; the caller then did `res[0]`, which on
+  `"NONE"` would have returned `"N"`. A leftover `detail` variable in a print
+  was also undefined (caught by the linter before running).
+- **Fix:** `primary()` now always returns a single emotion string; the caller
+  uses the `counts` dict directly. Confirmed correct on a clean run.
+
+## 6. Very low LLM-vs-NRC emotion agreement (22%) + LLM sentiment drift (Step 5)
+
+- **Symptom (expected behavior, now measured):** only 22/100 reviews had the
+  same primary emotion from both methods.
+- **Cause (LLM side):** the LLM collapsed to `joy` on 88 of 100 reviews — it
+  treated almost every positive review as joyful, so it rarely exercised the
+  other 7 emotions.
+- **Cause (NRC side):** with the fixed tie priority `anger → … → joy → sadness
+  → surprise → trust`, many positive reviews tied `anticipation` with `joy`
+  (e.g. words like "great", "easy", "gift") and the priority rule handed the
+  win to `anticipation` (59 of 100). The most common single disagreement was
+  `LLM joy -> NRC anticipation` (51 reviews).
+- **Sentiment drift:** the extended prompt flipped 1 of 100 sentiment
+  predictions versus Step 2 — row_index 46, "Love it!!" / "This is an online
+  gift card nothing to show sorry", Step 2 NEGATIVE → Step 5 POSITIVE. This is
+  the same ambiguous review flagged in the Step 1 spot-check; the new prompt
+  changed how it was judged. Flagged, not hidden; nothing overwrote Step 2 data.

@@ -1,0 +1,30 @@
+You are a sentiment classifier for Amazon product reviews. Your only job is to
+classify the sentiment of one review.
+
+You will be given a review's TITLE and TEXT. Use them together to judge the
+overall sentiment of the review.
+
+## Rules
+
+- Classify the review as exactly one of: POSITIVE or NEGATIVE.
+- Base your judgment on the TITLE and TEXT together. If the title and text
+  seem to conflict, weigh both and arrive at one overall judgment.
+- A very short review is still classifiable: a single clear sentiment word
+  (for example "Great", "Awful") is enough to decide.
+- Let emotion carry the sentiment: strong positive emotion reads as POSITIVE,
+  and strong negative emotion reads as NEGATIVE, even if the review never
+  states a clear opinion about the product.
+- Do not rate the review on any numeric scale and do not consider any star
+  rating. Only the supplied TITLE and TEXT exist for this task.
+- Do not add context, explanation, punctuation, or anything else.
+
+## Response format
+
+Return exactly one token and nothing else: POSITIVE or NEGATIVE.
+
+## Review
+
+TITLE: {title}
+TEXT: {text}
+
+SENTIMENT:

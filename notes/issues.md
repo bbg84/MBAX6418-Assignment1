@@ -129,3 +129,26 @@ Each entry: what happened, the cause, and how we worked around it.
   into POSITIVE.
 - So the balanced run reveals the model is much weaker than the lopsided run
   suggested, and 3-star reviews mostly read as negative rather than neutral.
+
+## 9. Step 7 dashboard — two display-integrity fixes (found during self-verification)
+
+- **Emotion-agreement percentages** rendered as "22" and "25.9" instead of
+  "22.0%" / "25.9%": formatting integer-valued floats (22.0) drops the decimal
+  and the "%" label was missing. Fixed by writing `Number(v).toFixed(1) + '%'`.
+- **Footer placeholder phrase** ("Balanced model: N/A — see dashboard.") was
+  leftover from a template edit. Removed and replaced with a precise source-of-
+  truth + labelling note distinguishing the Step 5 emotion section from the
+  balanced 150.
+- No functional bug; all metrics verified against the saved outputs.
+
+## 10. Percentage-formatting double-multiply in class-performance bars (Step 7, browser review)
+
+- **Symptom:** "Accuracy by class" rendered 92.0% as "9200.0%", 40.0% as
+  "4000.0%", 96.0% as "9600.0%", and the 3-star breakdown showed 1000% / 4000%
+  / 5000%.
+- **Cause:** the per-class rate was already computed as a percentage (e.g.
+  92.0) and then passed through the `pct()` helper which multiplies by 100
+  again (×100 twice).
+- **Fix:** format those values with `Number(x).toFixed(1)` directly instead of
+  `pct()`. Also renamed the section to "Accuracy by class" and clarified that
+  the denominator is the rating-derived class, per user review feedback.

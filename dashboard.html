@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MBAX 6418 · Assignment 1 · Review Sentiment &amp; Emotion</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --surface:#fff; --border:#e6e8ee; --text:#1c2430; --muted:#5c6675;
+    --accent:#2f6df6; --accent-ink:#fff;
+    --pos:#1e8e5a; --neg:#d64545; --neut:#c08a1d;
+    --pos-bg:#e7f5ee; --neg-bg:#fcecea; --neut-bg:#fbf1df;
+    --warn:#c77a12; --radius:14px;
+    --shadow:0 1px 2px rgba(16,24,40,.05),0 8px 24px -12px rgba(16,24,40,.12);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1060px;margin:0 auto;padding:40px 24px 72px}
+  header{margin-bottom:24px}
+  .eyebrow{font-size:12px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--accent);margin:0 0 8px}
+  h1{font-size:27px;line-height:1.2;margin:0 0 6px;letter-spacing:-.02em}
+  .sub{color:var(--muted);margin:0;font-size:15px}
+  .grid{display:grid;gap:16px}
+  .grid.kpis{grid-template-columns:repeat(4,1fr)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+  .kpi .label{font-size:12px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted)}
+  .kpi .value{font-size:32px;font-weight:750;letter-spacing:-.02em;margin-top:4px;font-variant-numeric:tabular-nums}
+  .kpi .value small{font-size:15px;color:var(--muted);font-weight:600}
+  .kpi .detail{font-size:13px;color:var(--muted);margin-top:2px}
+  h2{font-size:18px;margin:0 0 4px;letter-spacing:-.01em}
+  h3{font-size:14px;margin:16px 0 6px;letter-spacing:-.01em}
+  .lead{color:var(--muted);font-size:14px;margin:0 0 14px}
+  .banner{border:1px solid var(--warn);border-left:5px solid var(--warn);background:#fdf3e2;border-radius:10px;padding:13px 16px;font-size:14px}
+  .banner.note{background:var(--neut-bg);border-color:#e6c88a;border-left-color:var(--neut);color:#5a4300}
+  .banner.info{background:#eef3ff;border-color:#c9d8ff;border-left-color:var(--accent);color:#1d3a8a}
+  .banner b{color:#3a2c0f}
+  .banner.info b{color:#16306e}
+  .bars{margin-top:8px}
+  .bar-row{display:flex;align-items:center;gap:12px;margin:9px 0}
+  .bar-row .bl{width:130px;flex:none;font-size:13px;color:var(--muted);text-align:right}
+  .bar-row .btrack{flex:1;display:block;background:#e9edf4;border:1px solid #ccd3e0;border-radius:999px;height:22px;overflow:hidden}
+  .bar-row .bfill{display:block;height:100%;width:0;border-radius:999px;min-width:4px;box-shadow:inset 0 -1px 0 rgba(0,0,0,.12)}
+  .bar-row .bval{width:118px;flex:none;font-size:13px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+  .pos{color:var(--pos)} .neg{color:var(--neg)} .neut{color:var(--neut)}
+  .split{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  .chip{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .chip.pos{background:var(--pos-bg);color:var(--pos)} .chip.neg{background:var(--neg-bg);color:var(--neg)} .chip.neut{background:var(--neut-bg);color:#8a6200}
+  .chip.ms{background:#fdf1f1;color:#a34242;border:1px solid #f0caca}
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th{text-align:left;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--border)}
+  td{padding:10px;border-bottom:1px solid var(--border);vertical-align:top}
+  tr:last-child td{border-bottom:0}
+  .celltext{max-width:360px;color:#3a4350}
+  .celltext .t{font-weight:600;color:var(--text)}
+  .celltext .b{color:var(--muted);font-size:12.5px;display:block;margin-top:2px}
+  .celltext.full .b{max-height:none;overflow:visible}
+  .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11.5px;font-weight:700;white-space:nowrap}
+  .badge.pos{background:var(--pos-bg);color:var(--pos)} .badge.neg{background:var(--neg-bg);color:var(--neg)} .badge.neut{background:var(--neut-bg);color:#8a6200}
+  .badge.ms{background:#fdf3e2;color:#9a5e00;border:1px solid #e6c88a}
+  .badge.corr{background:var(--pos-bg);color:var(--pos)} .badge.mis{background:var(--neg-bg);color:var(--neg)}
+  .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  /* confusion matrix */
+  .cmat-wrap{overflow-x:auto}
+  .cmat{border-collapse:separate;border-spacing:5px;margin:6px 0;width:100%}
+  .cmat th,.cmat td{text-align:center;border-radius:10px;border:1px solid var(--border)}
+  .cmat th{background:var(--bg);color:var(--muted);font-size:11.5px;padding:8px}
+  .cmat td{width:20%;padding:12px 6px;font-size:14px;font-weight:700}
+  .cmat td .sub{display:block;font-size:11px;color:var(--muted);font-weight:600}
+  .cmat .rl{font-weight:700;color:var(--text);font-size:12.5px;background:var(--bg)!important}
+  .cm-ok{background:var(--pos-bg);color:var(--pos)}
+  .cm-err{background:var(--neg-bg);color:var(--neg)}
+  .cm-soft{background:var(--neut-bg);color:#8a6200}
+  /* filters */
+  .filterbar{display:flex;flex-wrap:wrap;align-items:flex-end;gap:16px;margin:14px 0;padding:14px;background:var(--bg);border:1px solid var(--border);border-radius:12px}
+  .fgroup{display:flex;flex-direction:column;gap:6px}
+  .fgroup.grow{flex:1;min-width:170px}
+  .flabel{font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
+  .seg{display:flex;gap:4px;flex-wrap:wrap}
+  .seg button{font:inherit;font-size:12.5px;font-weight:600;padding:6px 11px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--muted);cursor:pointer}
+  .seg button:hover{border-color:var(--accent);color:var(--accent)}
+  .seg button.active{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+  #kw{font:inherit;font-size:13px;padding:7px 10px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--text);min-width:150px}
+  #kw:focus{outline:none;border-color:var(--accent)}
+  .fcount{font-size:13px;color:var(--muted);align-self:center;white-space:nowrap}
+  .fcount b{color:var(--text);font-size:15px}
+  .reset{font:inherit;font-size:12.5px;font-weight:600;padding:7px 12px;border:1px solid var(--border);border-radius:8px;background:var(--surface);color:var(--accent);cursor:pointer;white-space:nowrap}
+  .reset:hover{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+  .foot{color:var(--muted);font-size:12px;margin-top:32px;line-height:1.6}
+  .emotion-note{font-size:13px;color:var(--muted);background:var(--neut-bg);border:1px solid #e6c88a;border-radius:10px;padding:10px 14px;margin:10px 0}
+  .klist{list-style:none;padding:0;margin:8px 0 0;font-size:13.5px}
+  .klist li{margin:5px 0}
+  .klist b{font-variant-numeric:tabular-nums}
+  @media(max-width:760px){.grid.kpis{grid-template-columns:repeat(2,1fr)}.split{grid-template-columns:1fr}.bar-row .bl{width:104px}}
+</style>
+</head>
+<body>
+<script type="application/json" id="app-data">{"rows": [{"rating": 5.0, "title": "gift card", "text": "It makes it quick and easy when I add money for my in app purchases", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "trust"}, {"rating": 5.0, "title": "Pretty", "text": "Basic gift card", "correct_label": "POSITIVE", "prediction": "NEUTRAL", "correct": false, "emotion_llm": "trust"}, {"rating": 4.0, "title": "Four Stars", "text": "I liked the design.  It was easy to obtain and didn't need additional gift wrapping.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Five Stars", "text": "real benefits, thanks", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Awesome", "text": "Great deal", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "great to use", "text": "liked points", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Reloading my balance", "text": "Love this site,never have any problems reloading.  Thank you.  C", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "I really like these gift cards", "text": "I really like these gift cards. They are a lot nicer than the gift cards you can buy in the stores.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Very cute!", "text": "Very cute and arrived on time.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Very nice.", "text": "Arrived next day. Cool little tin. People really liked the packaging. Nice addition to the standard gift card. Definitely will buy again.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Convenient", "text": "The presentation tin was very nice.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "an easy way to add money to my account", "text": "a thumbs up", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Great Service!!", "text": "Received my card today in excellent condition and I know that I will have a very happy teenager come Christmas", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Gift Cards how can you rate gift cards", "text": "Gift Cards are gift cards...can't go wrong there.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "trust"}, {"rating": 5.0, "title": "Nice Packaging of the Gift Card", "text": "Loved the box it came in!", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Gift card", "text": "Awesome", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Always a hit", "text": "Great gift", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Fast and easy.", "text": "A last minute gift for Christmas.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "anticipation"}, {"rating": 5.0, "title": "Amazing", "text": "He loved it!", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 4.0, "title": "Ease of  use.", "text": "It is so easy load. No problems at all.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Excellent", "text": "Loved it", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Great gift card for friends in holiday season", "text": "Great design of gift card for friends to eat some chipotle food in holiday season. Easy to use.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Gift cards are neat", "text": "They're gift cards. Woohoo you payed to put money on a card. I know I did it. It was for good reason though.", "correct_label": "POSITIVE", "prediction": "NEUTRAL", "correct": false, "emotion_llm": "trust"}, {"rating": 5.0, "title": "$100 Amazon gift card", "text": "Excellent!  Design was nice", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Great for spending. Not great for sinking in jello", "text": "I put this gift card in jello for my sisters-in-laws birthday... the tin floats. Man did i not see that coming. If you buy this to put it in jello, maybe get some rocks for the inside. Otherwise it will float. Clearly a stapler is easier to use. The card spends great tho! Highly recommend if you don’t need to put in jello... also still recommend if you do need to put it in jello.", "correct_label": "POSITIVE", "prediction": "NEUTRAL", "correct": false, "emotion_llm": "surprise"}, {"rating": 5.0, "title": "good stuff", "text": "loved the packaging. Makes giving a gift card much better.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Fun for birthdays", "text": "Great birthday gift.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Great gift box", "text": "Loved the free gift box", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Thank", "text": "Thank", "correct_label": "POSITIVE", "prediction": "NEUTRAL", "correct": false, "emotion_llm": "trust"}, {"rating": 5.0, "title": "Cute", "text": "Really cute for a birthday present.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Five Stars", "text": "Great investment. I need more", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Great", "text": "Great.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Five Stars", "text": "excellent", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Easy to load, was what I needed to complete a transaction", "text": "I was reminded that I can reload this card to help complete a purchase that I was short of only 50 cents. It loads money in an instant, and I was able to complete the transaction to receive item the very next day. I would like to thank the rep who reminded me I can do this, because I was frustrated and would have simply cancelled my order.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "trust"}, {"rating": 5.0, "title": "Arrived in 2 days 👍", "text": "Quick delivery and great gift for friend traveling", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 4.0, "title": "Four Stars", "text": "Granddaughter was very happy with it.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Five Stars", "text": "Perfect gift for anyone.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "For those sewers in your life.", "text": "Great gift card for those crafty people on your list.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Great gift idea", "text": "Came quickly, and they loved they could what they want", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Five Stars", "text": "Great gift", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Five Stars", "text": "Great", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Hassle free Christmas", "text": "I’m happy with my purchase. It made giving Christmas gifts so much easier to just buy this gift card online and get it delivered to my family member. This made my life so much easier and I’m glad I didn’t have to go out into traffic to get it.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Cute Box", "text": "Who doesn't love an amazon card", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Five Stars", "text": "just what i asked for", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Perfect Gift", "text": "Perfect gift for someone who has most everything.", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Loved how easy it is to use", "text": "It was super easy to top up and super giftable", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Easy gift giving", "text": "Nice", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Works", "text": "What else can I say? It works!", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "trust"}, {"rating": 5.0, "title": "Gift card", "text": "Excellent seller and product", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 5.0, "title": "Loved it", "text": "Loved the special graduation icons", "correct_label": "POSITIVE", "prediction": "POSITIVE", "correct": true, "emotion_llm": "joy"}, {"rating": 3.0, "title": "Great idea for a grad...", "text": "Ordered 2...one was fine the other damaged.  I am sure the recent grad wont care...just frustrating.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Three Stars", "text": "1", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "sadness"}, {"rating": 3.0, "title": "Leave yourself time to match gifts to recipients!", "text": "Gift card tin arrived with Santa bag on time. However, the recipient information was tossed in the package without any reference to the actual gifts. Luckily I knew which tag went with which gift, and the gift values weee the same. However, this was a problem for gifts sent directly to recipients. The only gifts which were properly marked were the gift-wrapped items, but even those arrived with extra recipient tags adding to confusion. We should not have to build-a-gift at these prices. Amazon, you can do much better than this!", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Limited use", "text": "This gift card cannot be used at Starbucks in a Barnes and nobles store.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Beautiful box for presentation.", "text": "Kind of hard to open, would prefer it to open on the top.?", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "anticipation"}, {"rating": 3.0, "title": "I gave these as christmas gifts to my nieces and ...", "text": "I gave these as christmas gifts to my nieces and nephews. They appreciated the gift and credit card of their own feel. Unfortunately Auntie was expected to take them to the movies and provide a meal with this gift.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Ok", "text": "Ok", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "trust"}, {"rating": 3.0, "title": "Three Stars", "text": "This tin came all dented.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "It's not the product, it's how the package was handled/delivered", "text": "The gift cards are great. The only reason for the 3star review is how I got my package.... All of the tin Santa cases for the gift cards are all dented... The package I received had over 9 delivery stickers on it and was delayed for more than 6 days. There was no weather problems during those days....", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Convenient service but still some confusion?", "text": "The reload itself went fine but I had some problems re activating the reloaded card as my payment option. I'm still not sure how I got it to work...", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "surprise"}, {"rating": 3.0, "title": "Just a gift card", "text": "Just a gift card", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "trust"}, {"rating": 3.0, "title": "Call the number on the back to register card DO NOT USE SITE", "text": "2/3 worked fine trying to get Amazon to fix the last card because a google charge ended up there that wasn’t me. People are using fake sites to steal money so just call the number on the back of the card to avoid your money going missing and try to transfer it to a personal card if you can", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "fear"}, {"rating": 3.0, "title": "Nice product but…", "text": "Purchased these to add to teacher appreciation gifts. The gift card holders/envelopes are really nice and make for very nice presentation. However I ordered three and one came destroyed. There are no holes in the plastic but it is stretched like someone purposely ripped the envelope open. The claim sticker is not removed so I don’t believe the gift card has been compromised. But if someone ordered these they are likely for a gift so why would you send one that is destroyed.", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "anger"}, {"rating": 3.0, "title": "misleading", "text": "Figured out that this whole mess was because there were more than a card in some of the boxes (one worked, the other not).", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Why don’t you include the amount?!", "text": "I read reviews that the total wouldn’t be on the cards. I was fine with it. Until I learned I’d have to scratch every gift card code on the back to figure out the totals. Now they look used and have to give them to my kids teachers. Ridiculous. I’d imagine these are pretty loaded In the warehouse waiting to go out? Put the amount on the plastic bag they come in. It’s really not that complicated.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "its gift card", "text": "its a gift card, not even sure why Amazon wants me to review it. It was a pain as I had credit card gift card I wanted to use and pay the remainder on my debit card, Amazon said \"no\". So I had to buy this gift card with the other gift card so I could buy my gift and pay the difference on my own card, what a pain.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Service", "text": "My card was all damaged and the outside envelope came later then said", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Confusing!!", "text": "Very confusing!", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Santa Gift Card Box", "text": "Great gift card presentation device.  However, the paint on edges of the lids was marred/chipped.  Ordered replacements still not perfect.", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "disgust"}, {"rating": 3.0, "title": "Look and Wait", "text": "difficult to find and no verification that I was successful in using online reload but overall OK", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "anticipation"}, {"rating": 3.0, "title": "Gift message was not left with package, my brother had no idea who it was from, very disappointing.", "text": "Should have given the gift message with the gift card so my brother knew who it was from.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Great gift to me", "text": "The design is cool. Overall GOOD.", "correct_label": "NEUTRAL", "prediction": "POSITIVE", "correct": false, "emotion_llm": "joy"}, {"rating": 3.0, "title": "Need be more Attractive!!!", "text": "Can be a little more attractive for kids.", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "anticipation"}, {"rating": 3.0, "title": "Wht such a high purchase fee?", "text": "I think the service fee of $5.95 is too high.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "As expected", "text": "As expected", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "trust"}, {"rating": 3.0, "title": "There was zero balance on card! It was supose to be $25.000 gift card!", "text": "There was zero balance on gift card! It should have been $25.00. She went to use it and there was supose to be a  card with it and no card to say who was from! This needs to be corrected. .", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "not unusually", "text": "unlike nothing, it was not special , I brought these for my spouse, he said the food was better in NJ", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "disgust"}, {"rating": 3.0, "title": "Pretty but too thin", "text": "It is too thin as I thought", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "disgust"}, {"rating": 3.0, "title": "Having problems doing that", "text": "Trying to cancel it", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "OK Gift Card", "text": "OK Gift Card but the package was damaged", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "disgust"}, {"rating": 3.0, "title": "Attractive box and good gift for friends", "text": "It's always a good gift to thank friends. No other item is better than an Amazon gift card I believe. The gift box is attractive and good appearance.", "correct_label": "NEUTRAL", "prediction": "POSITIVE", "correct": false, "emotion_llm": "trust"}, {"rating": 3.0, "title": "Good value", "text": "Good value", "correct_label": "NEUTRAL", "prediction": "POSITIVE", "correct": false, "emotion_llm": "trust"}, {"rating": 3.0, "title": "Details unclear", "text": "An attractive offer but i did not understand that the bonus would only apply to an order shipped directly from Amazon", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "surprise"}, {"rating": 3.0, "title": "Beware of packaging", "text": "I purchased a $50 gift card and had it sent to a relative. All of the online documentation indicated the recipient would not know what was in the package.  There was a box during the order process for a To: and From: and I also added \"Do Not Open Until Christmas\". The package arrived on the specified day but the label on the outside of the box did not have any indication of my note.  The recipient opened the box to find a sealed Amazon envelope and a packing slip.  The sealed envelope contained the gift card.  I figured the note should be here; nope.  I finally found the note on the packing slip.  OK, that's fine, but the packing slip also had the description of what was inside the sealed envelope including the denomination of the gift card; so much for a surprise.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Oh boy!", "text": "Good stuff.", "correct_label": "NEUTRAL", "prediction": "POSITIVE", "correct": false, "emotion_llm": "joy"}, {"rating": 3.0, "title": "Gift card", "text": "Easy to use and reload", "correct_label": "NEUTRAL", "prediction": "POSITIVE", "correct": false, "emotion_llm": "trust"}, {"rating": 3.0, "title": "It wasn't like the one on this page", "text": "I wasn't impressed with the tin. It wasn't like the one on this page. Get candy crush jelly saga.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "disgust"}, {"rating": 3.0, "title": "Filling a leaky bucket", "text": "The process is easy, which is good because Kindle raids that balance first.  When you go back later to use the balance, it's reduced or gone.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "ill try most things, once", "text": "glad to get a ten dollar reward to try it out.", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "anticipation"}, {"rating": 3.0, "title": "Almost threw it in the trash! Needs better labeling on outside envelope.", "text": "I love Amazon and shop continuously on it.  I bought a gift card for my mom for Xmas and the tracking info actually said I would get it one day earlier than the other products I ordered at the same time.  So when a non descript sealed envelope came in a box with something else I tossed it on the counter thinking it was junk mail like so many other companies send with their products.  I actually forgot about the GC as I expected it to come snail mail solo.  So this envelope sat for a few days and as I was tossing it into the recycle bin I decided to tear it open.  What to my surprise was inside but another envelope, the holiday card and gift card.  Wow was I surprised.  Since the outside envelope is just packaging it should be better labeled as to the contents.", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "surprise"}, {"rating": 3.0, "title": "How much is on the card?", "text": "I ordered several gift cards at different amounts.  They all came in the same package and there's no way to tell which one is which.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Disappointed in the bent tin.", "text": "I received this and it was so bent up that the cupcake tin wouldn’t close.  I was disappointed because it was for a child’s birthday gift.  I’ve purchased many gift cards and this is the only time I was unhappy with my purchase.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "sadness"}, {"rating": 3.0, "title": "ok but I was offered a $10. gift promo ...", "text": "ok  but I was offered a $10. gift promo for ordering it but did not receive it... and I ordered another $50.card with same promo and got card and no promotion., so I gave it a 3", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Would have been nice if the \"this is a gift\" line was noticed ...", "text": "This was a gift item and the person receiving said there was no information from where it came.  She had to send an embarrassing text to find out &#34;who sent the Amazon gift card&#34;.  Would have been nice if the &#34;this is a gift&#34; line was noticed with to and from.", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Could not use", "text": "I don’t think it has anything on it", "correct_label": "NEUTRAL", "prediction": "NEGATIVE", "correct": false, "emotion_llm": "anger"}, {"rating": 3.0, "title": "Three Stars", "text": "Cute little Xmas case", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "joy"}, {"rating": 3.0, "title": "Hard to figure the value from outside.", "text": "Hard to figure the value from outside.", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "anticipation"}, {"rating": 3.0, "title": "works but could be simpler", "text": "works but could be simpler to use", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "trust"}, {"rating": 3.0, "title": "No specific comments", "text": "No specific comments", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "trust"}, {"rating": 3.0, "title": "Good", "text": "Ok", "correct_label": "NEUTRAL", "prediction": "NEUTRAL", "correct": true, "emotion_llm": "trust"}, {"rating": 1.0, "title": "Overcharged", "text": "I purchased a Brother Compact Monochrome Laser Printer, HL-L2370DWXL, which included a promotional offer, \"Buy any Brother XL Printer, and receive a $20 gift card... Gift Card must be added to Shopping Cart, and offer will be reflected at Checkout.\" I should not have been charged for this card. Very unhappy.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Not a Bear.  Tradition Ruined", "text": "I've been getting the Amazon Gund bear every year.  This year the bear was replaced by socks.  Very sad end to a great tradition from the Amazon promotion team..", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "sadness"}, {"rating": 1.0, "title": "One Star", "text": "Not very happy went to use this and it was not loaded with the $25 :(", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Horrible, horrible, horrible!! Do NOT order from this SHAM company!", "text": "I don't know what kind of sweatshop these guys are running, but I've had problems with them since day ONE--I tried to give them ZERO STARS, but I HAD to give them at least one (which is being generous, in my opinion). I ordered my cards well in advance, and they still did not arrive on time. When I called the company to figure out what the issue was, they sent my phone call to somewhere in India--I was put on hold numerous times while they scrambled around trying to figure out what was going on with an order they had sent. When they finally had some information, they GUARANTEED a delivery date--the date passed with NO cards in the mail whatsoever. Apparently, this 'company' (and I use that term very loosely) takes 2+ weeks to process and send out FAULTY orders.<br /><br />When the individual DID receive the card it looked as though it had been used, and did not even WORK. When I explained to 'GiftCard Mall' what had happened, and told them that my mother said it looked like the card was in rough condition (the individual at the store the card was purchased for, in fact, confirmed the card HAD been reloaded--she had guessed it was multiple times from the shape the card was in), they implied that she was lying about it! The manager I spoke with on the phone was constantly interrupting me and trying to speak over me while I was trying to explain myself--trying to convince me that the United States Postal Service doesn't have tracking numbers. I told the manager that I was guaranteed a delivery date when I called previously, at the very least I expect a company to stick by the guarantees THEY offer, but apparently this company does NOT stick by their promises. The records they had of my previous conversation was entirely lacking, and instead of trying to resolve the issue the 'manager' (I say this because he was both condescending and unprofessional) then sent me off to get lost in the paperwork of some 'corporate office.'<br /><br />I love Amazon, and I love the convenience of online shopping--I would have been a FREQUENT customer of GiftCard Mall, but this business isn't a business at all. These guys take your order and your HARD-EARNED MONEY, and then throw an old, previously used giftcard in the mail hoping it's the right store, with the right amount, going to the right location--if not, oh well! It will be your fault...but only because you still chose to order from them after reading this.<br /><br />From now on, I will be buying my giftcards the old-fashioned way--if it ain't broke...", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "RIP OFF", "text": "What a rip off had on watch list and hit add to cart right away and put on waiting list", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Was not activated", "text": "Was not activated.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "DON'T BUY, UNUSABLE", "text": "Worthless, can't be used towards any type of special spotify account (Student, family etc.).<br /><br />Also couldn't be returned after I discovered this trap.<br /><br />Spotify are a bunch of blood sucking leeches who deserve more 1 star ratings for this. I'm literally canceling my own spotify premium and switching to Pandora just because of this putrid experience.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Love the iTunes but no good 😢", "text": "The numbers & letters is wrong I want a new<br />$200.00 card. Because the one I have look like someone had used it. I scratch it off but someone<br />knew the numbers, letters I was the one scratch it off", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "HORRIBLE GIFT CARD", "text": "CUSTOMER SERVICE IS TERRIBLE", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Never received $5. bonus promised when purchased.", "text": "Hi,  First, I never received the $5. bonus that I was supposed to get in November.  Second, I purchased these as Christmas gifts and because of all the reviews from people who had problems cashing the cards in, I was afraid to give them to anyone else.  I ended up applying all 3 cards to my own Amazon account.  Thank goodness they all worked but I couldn't use them as gifts.  Third, the area on the back that you are supposed to &#34;scratch&#34; off was very difficult to remove and on one card, one of the letters beneath it was almost removed as well.  I had to try a couple of times before I got the right letter & the card finally was approved.  I would not take a chance on an &#34;offer&#34; like this from Amazon again.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Box was crushed.", "text": "The box was in terrible shape. I could not use it with the gift card.🙁", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "sadness"}, {"rating": 1.0, "title": "Delivery", "text": "Missed promised date", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "One Star", "text": "works fine", "correct_label": "NEGATIVE", "prediction": "NEUTRAL", "correct": false, "emotion_llm": "trust"}, {"rating": 1.0, "title": "Came without being loaded", "text": "I bought this as a gift for my mother on Christmas.  When she went to use it, it had no money on it.  I had bought others that worked fine, but this one did not.  Unfortunately it ruined a holiday  present for family.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "This sux", "text": "Bad", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "was not activated", "text": "I was trying to buy some thing and kept on saying that the card was invalid", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Do not buy", "text": "This is a scam - can't be used for Spotify, it's a joke", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "False advertising", "text": "Ripp off. The offer was  $50.00 for $40.00 and the charged the $50.00. Dont fall for it. The cards did arrive timely but not at the price avertized.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "I recieved only 16.", "text": "Orginal order was for 18 cards, I recievd only 16.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 2.0, "title": "Prepare to wait...", "text": "They claim it will take 5 minutes... more like over an hour every time.. this is inconvenient  and almost funny because when the money goes directly through it should automatically  reflect on the balance... sorry amazon buy this process is broken..", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "A nightmare", "text": "There is no simple way to get these v bucks onto a secondary account on ps4. Epic games and PlayStation are both no help in fixing the issue either", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "One Star", "text": "This card was not activated for use. Could not return it.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Mystery Gift", "text": "My daughter was gifted a card and has no way to determine value without redeeming!", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Amazon, really,  you can do better than this!!", "text": "It is a rip off!  I should have read the reviews.  Amazon, really, you can do better than this.... my trust level for your company just went down.  This is the second time this month I have bought a non returnable item from Amazon.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Connections Account not safe for gift cards", "text": "We purchase gift cards every year from Cinemark and reload them throughout the year. We listened to the advertising and advice from Cinemark and added our giftcard to our connection account a little over a year ago. BIG MISTAKE! Cinemark does not have good protection from cyber hackers for their connection site. Thus our giftcard was hacked from the connections site and we lost $225.00 of our giftcard balance when that balance was stolen from their site and used over 800 miles a way to, I guess, have an expensive movie night out! I wish we had ignored Cinemark and their advertising as if we had just used the giftcard we purchased and taken it out of our wallet to pay and not linked the GC number to our account we would still have $225.01 that was haced.<br /><br />Cinemark also does not honor their guests. We have been treated rudely. Told musinformation, like that their loss prevention team would call yet that has never happened. Also asked to be able to speak to corporate about our situation only to have our requests fall on deaf ears. We filed a police report, but could not give completed information as we have been unable to speak with loss prevention about exactly what happened. How was our account hacked? Were other accounts hacked? So today we also filed a complaint against Cinemark USA Inc. For lack of customer service, failure to secure their site while protecting people's money and still advertising to people to add your GC to that unsafe site! Protect yourself. Buy your giftcard, keep it safe in your wallet and enjoy it from there. That way you keep what is yours! Don't let Cibemark lose what is yours! Trust me they won't do anything about it and they won't give the lost money back!", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "One Star", "text": "i couldnt pre-order mp3 album with it", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Scam", "text": "Do not buy.  If you search gift car this comes up.  Thought I was buying 500 gift card to give away, instead it put it on my account.  I dealt with amazon chat and was told they are unable to return it or take it back and that I would have to purchase another gift card.  So I went and got my actual gift card went to checkout.... cannot use gift card balance to buy a gift card.  Ridiculous amazon cannot undo this purchase", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Gift card arrived water damaged", "text": "Gift card arrived water damaged even though it was within plastic wrapping. Could not give it as a gift.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 2.0, "title": "These are handy for tough to buy for folks.  Not very personal, but it does allow them to make their own purchases.", "text": "These are handy for tough to buy for folks.  Not very personal, but it does allow them to make their own purchases.", "correct_label": "NEGATIVE", "prediction": "NEUTRAL", "correct": false, "emotion_llm": "trust"}, {"rating": 1.0, "title": "Doesn't work", "text": "It doesn't work", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 2.0, "title": "Refused at some restaurants", "text": "I gave four of these as gifts for Christmas.  Some restaurants will not take them.  Doesn’t make for a very good gift if you’re limited on where you can use them.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "disgust"}, {"rating": 1.0, "title": "No value!", "text": "Tried to purchase with the card. Said zero value.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 2.0, "title": "I'm glad I did not give this card away as a ...", "text": "I'm glad I did not give this card away as a gift because I would be embarrassed to find out that it did not work for the recipient when it was supposed to. I've called the phone number on the back of the card and it is activated and contains the appropriate balance. The card, however, did not read and was neither &#34;accepted or declined&#34;, as the manager was telling me this.<br /><br />I've gone to the company that operates the card and it referenced that any redemption issues should notify the retailer that issued the card. So now I wait to find out how I can use my card with a balance but cannot be read and processed.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "To give a Christmas gift card in June someone screwed up. I asked for a different card front", "text": "Wrong card.  I’ll keep this for Christmas", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "damaged", "text": "Bought this as a gift for my grandson's birthday.  The gift card looks OK, but the Happy Birthday gift card holder was ripped and looks awful.  I'll have to tape it together, which will make for a lousy presentation.  Disappointing.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "sadness"}, {"rating": 1.0, "title": "Envelopes were too small for the cards!", "text": "The envelopes were too small for the cards", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Complete disregard to product quality.", "text": "What a cutesy design on the product's page, right? I ordered this birthday one, and a graduation one. The graduation one was perfect; 5 stars, presentation, container, etc. This birthday one however, wasn't.<br /><br />They shipped it, WITHOUT THE OTHER CUPCAKE HALF.<br /><br />Someone shoved this half baked birthday card inside a brown envelope alongside a perfectly done one, and said \"Yep, this is fine!\"", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Don’t travel with Amazon credits.", "text": "I tried to add some funds to purchase a movie and it let me add the funds but not use them to purchase the movies because I was out of the country when attempting this.  So I’ll go back to using Netflix which works wherever I go.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 2.0, "title": "It was supposed to be for mother's day and I received one that looked more like it was intended for a birthday", "text": "I received the wrong card. It was supposed to be for mother's day and I received one that looked more like it was intended for a birthday, with balloons and such on it.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "One card was empty", "text": "I have them as gifts but one card has nothing on it", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "DIFFICULT TO USE. BRING BACK THE OLD FORMAT!", "text": "DIFFICULT TO USE. BRING BACK THE OLD FORMAT!", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "There's truly little reason to buy a Fandango gift card ...", "text": "There's truly little reason to buy a Fandango gift card.  About 20% of it goes to &#34;Convenience Fees&#34;.  Just buy a gift card to the theater directly.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Did not work", "text": "I gave this to my friend As a gift it says there is money on the card but it will not work<br />It shut down a system at a store when they tried to use it. When you call it says money is on there but they can’t use it", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "That I can use it", "text": "The one did not work.  Won’t buy again", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Cards were empty. Waste of money.", "text": "Unable to redeem these cards, they each had $0 dollars on them. Money down the drain.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "What headline?", "text": "I thought I could use it for subscription or something. Couldn't. Currently I don't know what to do with it or how to use it...", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "sadness"}, {"rating": 1.0, "title": "Auto-Renewal caused a big problem", "text": "Even though the price was great, I can't recommend purchasing Office 365 through Amazon.  Cancelling the auto-renewal was easy but in the eyes of MS, my office account was locked to Amazon.  Took lengthy phone calls with MS support over several weeks to resolve.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Card was not activated", "text": "The card was not activated and by the time the person I sent it tried to use it, the card was declined and Amazon has no option to return it. I called the number on the back of the Visa card and was directed back to Amazon. $105 wasted.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 2.0, "title": "how", "text": "dont know  when to reload..never comes up how to use and reload..am i getting my moneys worth as i don't know..no feed back on this", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}, {"rating": 1.0, "title": "Don’t expect this card to function like a typical Visa", "text": "Don’t buy this card. This card doesn’t work with Apple Wallet (cannot get added). It doesn’t work at gas station either. I ended up adding it back to my Amazon account.", "correct_label": "NEGATIVE", "prediction": "NEGATIVE", "correct": true, "emotion_llm": "anger"}], "src": {"step2": {"total": 100, "acc_pct": 97.0, "pos": 93, "neg": 7}, "step5": {"agree_all": 22, "agree_all_pct": 22.0, "agree_noNone": 22, "agree_noNone_pct": 25.9, "none": 15, "joy_anti": 51, "ties": 52, "ties_to_anticipation": 48, "joy_anti_tiebreak": 43, "joy_anti_clear": 8}, "source_files": ["outputs/step6_results.json", "outputs/step6_sample.json", "outputs/step2_results.json", "outputs/step5_results.json"]}}</script>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">MBAX 6418 · Assignment 1 · Final Dashboard</p>
+    <h1>Amazon Gift Card Review Sentiment &amp; Emotion</h1>
+    <p class="sub">A balanced <b>150-review</b> three-class analysis — how well an LLM classifies each review as <b class="pos">POSITIVE</b>, <b class="neut">NEUTRAL</b>, or <b class="neg">NEGATIVE</b>, checked against a label derived from the star rating.</p>
+  </header>
+
+  <section class="grid kpis" id="kpis"></section>
+
+  <div class="banner note" id="balanceBanner"></div>
+
+  <section class="grid" style="margin-top:16px">
+    <div class="card">
+      <h2>Star-rating distribution (balanced 150)</h2>
+      <p class="lead">Because multiple star ratings map to the same sentiment class, the individual star counts are uneven: most POSITIVE reviews are 5-star, while all NEUTRAL reviews are 3-star.</p>
+      <div class="bars" id="starBars"></div>
+    </div>
+    <div class="card">
+      <h2>Accuracy by class</h2>
+      <p class="lead">Share of each <b>rating-derived</b> class the model classified correctly (denominator = true/rating-derived class). NEUTRAL is the weak class.</p>
+      <div class="bars" id="perfBars"></div>
+      <h3>3-star NEUTRAL breakdown</h3>
+      <p class="lead" style="margin-bottom:8px">Of the 50 rating-derived NEUTRAL (3-star) reviews:</p>
+      <div class="bars" id="neutBars"></div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Correct label vs. model prediction (3×3 confusion)</h2>
+    <p class="lead">Rows are the rating-derived correct class; columns are what the model predicted. Green = correct. The NEUTRAL row shows the model's trouble: <b>25 of 50 neutral reviews were called NEGATIVE</b>.</p>
+    <div class="cmat-wrap">
+      <table class="cmat" id="cmat">
+        <thead><tr><th>Correct ↓ / Predicted →</th><th>POSITIVE</th><th>NEUTRAL</th><th>NEGATIVE</th></tr></thead>
+        <tbody id="cmatBody"></tbody>
+      </table>
+    </div>
+    <div class="tags" id="cmTags"></div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Original imbalanced run vs. final balanced run</h2>
+    <p class="lead">The original first-100 run looked far more accurate — but that sample was heavily lopsided. The two numbers are <b>not</b> directly comparable.</p>
+    <div class="split">
+    <div class="card" style="box-shadow:none">
+      <h3>Step 2 — original 100 (heavily imbalanced)</h3>
+      <ul class="klist">
+        <li>Overall accuracy: <b id="s2acc"></b></li>
+        <li>Class mix: <b id="s2dist"></b></li>
+        <li>Why inflated: 93% of the batch was POSITIVE. There was <b>no NEUTRAL class in Step 2</b> — 3-star reviews were grouped into NEGATIVE, so some "negative" labels were actually neutral reviews.</li>
+      </ul>
+    </div>
+    <div class="card" style="box-shadow:none">
+      <h3>Step 6 — balanced 150 (50 / 50 / 50)</h3>
+      <ul class="klist">
+        <li>Overall accuracy: <b id="s6acc"></b></li>
+        <li>Class mix: <b id="s6dist"></b></li>
+        <li>The balanced run is a clearer test of performance across all three classes — accuracy drops because the rare NEUTRAL class is finally represented.</li>
+      </ul>
+    </div>
+    </div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Review-by-review detail</h2>
+    <p class="lead">All <span id="totalN"></span> balanced reviews — <span id="okN"></span> correct, <span id="badN"></span> mismatched.</p>
+    <div class="filterbar">
+      <div class="fgroup" data-role="verdict">
+        <span class="flabel">Verdict</span>
+        <div class="seg">
+          <button data-v="All" class="active">All</button>
+          <button data-v="Correct">Correct</button>
+          <button data-v="Mismatched">Mismatched</button>
+        </div>
+      </div>
+      <div class="fgroup" data-role="pred">
+        <span class="flabel">Model said</span>
+        <div class="seg">
+          <button data-p="All" class="active">All</button>
+          <button data-p="POSITIVE">POSITIVE</button><button data-p="NEUTRAL">NEUTRAL</button><button data-p="NEGATIVE">NEGATIVE</button>
+        </div>
+      </div>
+      <div class="fgroup" data-role="derived">
+        <span class="flabel">Rating-derived</span>
+        <div class="seg">
+          <button data-d="All" class="active">All</button>
+          <button data-d="POSITIVE">POSITIVE</button><button data-d="NEUTRAL">NEUTRAL</button><button data-d="NEGATIVE">NEGATIVE</button>
+        </div>
+      </div>
+      <div class="fgroup grow">
+        <span class="flabel">Search title / text</span>
+        <input id="kw" type="text" placeholder="Type a word…">
+      </div>
+      <div class="fcount">Showing <b id="shown">150</b> of 150 reviews</div>
+      <button id="resetBtn" class="reset">Show all 150</button>
+    </div>
+    <div id="allTable"></div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Mismatched reviews <span class="note">(model disagreed with the rating-derived label)</span></h2>
+    <p class="lead" id="mismatchLead"></p>
+    <div id="mismatchTable"></div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>Emotion analysis <span class="note">(SEPARATE — original 100-review sample, Step 5)</span></h2>
+    <div class="emotion-note">
+      <b>This section is a separate analysis on the original 100-review binary sample — NOT the balanced 150 above.</b>
+      It compares the <b>LLM</b>'s primary emotion against a purely word-list <b>NRC</b> emotion — two independent methods.
+    </div>
+    <div class="split" style="margin-top:6px">
+      <div class="card" style="box-shadow:none">
+        <h3>LLM-vs-NRC agreement</h3>
+        <ul class="klist">
+          <li>Same primary emotion: <b id="eAgreeAll"></b> of 100 (<b id="eAgreeAllPct"></b>)</li>
+          <li>Excluding 15 NRC "no emotion" reviews: <b id="eAgreeNoNone"></b> of 85 (<b id="eAgreeNoNonePct"></b>)</li>
+          <li>NRC found no emotion in: <b id="eNone"></b> reviews</li>
+          <li>Dominant disagreement: <b>LLM joy → NRC anticipation</b> (<b id="eJoyAnti"></b> cases)</li>
+        </ul>
+      </div>
+      <div class="card" style="box-shadow:none">
+        <h3>Tie-break caveat</h3>
+        <ul class="klist">
+          <li><b id="eTies"></b> of 85 nonzero NRC reviews had a tie for the top (<b id="eTiesAnti"></b> resolved to anticipation by our fixed priority rule)</li>
+          <li>Of <b id="eJoyAnti2"></b> joy→anticipation mismatches, <b id="eTiebreak"></b> occurred where anticipation merely <b>tied</b> joy — not clearly outscoring it (<b id="eClear"></b> clearly higher)</li>
+          <li>Most of the disagreement is an artifact of the tie-break, not strong NRC signal.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <p class="foot" id="foot"></p>
+</div>
+
+<script>
+  const A = JSON.parse(document.getElementById('app-data').textContent);
+  const ROWS = A.rows, SRC = A.src;
+  const N = ROWS.length;
+  const CLASSES = ['POSITIVE','NEUTRAL','NEGATIVE'];
+
+  const ok = ROWS.filter(r=>r.correct), bad = ROWS.filter(r=>!r.correct);
+  const acc = ok.length/N;
+  const pct = f=>(f*100).toFixed(1);
+  const esc = s=>{const d=document.createElement('div');d.textContent=s;return d.innerHTML;};
+  const chip = (c,lab)=>`<span class="chip ${c.toLowerCase()}">${lab||c}</span>`;
+  const badge = (c)=>c==='POSITIVE'?'<span class="badge pos">POSITIVE</span>'
+      : c==='NEGATIVE'?'<span class="badge neg">NEGATIVE</span>':'<span class="badge neut">NEUTRAL</span>';
+  const cls = r=>r.correct_label, pred = r=>r.prediction;
+  const byClass = c=>ROWS.filter(r=>cls(r)===c);
+  const pcOk = c=>byClass(c).filter(r=>r.correct).length;
+
+  // ---- KPIs ----
+  function kpi(l,v,d){return `<div class="card kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="detail">${d}</div></div>`;}
+  document.getElementById('kpis').innerHTML =
+    kpi('Reviews',  N, 'balanced 50/50/50') +
+    kpi('Overall accuracy', pct(acc)+'%', `${ok.length}/${N} correct`) +
+    kpi('Correct', ok.length, 'matched the rating-derived label') +
+    kpi('Mismatched', bad.length, 'did not match the rating-derived label');
+
+  document.getElementById('balanceBanner').innerHTML =
+    `<b>Balanced sample — and this changes the picture.</b> This run draws 50 POSITIVE, 50 NEUTRAL, and 50 NEGATIVE reviews (fixed seed, reproducible). ` +
+    `Because every class is equally represented, the overall ${pct(acc)}% is a more informative measure of performance across classes than the original imbalanced run below.`;
+
+  // ---- star distribution (from the balanced sample ratings) ----
+  function barRow(label, wPct, val, color, clsColor){
+    return `<div class="bar-row"><span class="bl">${label}</span><span class="btrack"><span class="bfill" style="width:${wPct}%;background:${color}"></span></span><span class="bval">${val}</span></div>`;
+  }
+  const starCounts = [0,0,0,0,0];
+  ROWS.forEach(r=>{ if(r.rating>=1&&r.rating<=5) starCounts[Math.round(r.rating)-1]++; });
+  const maxStar = Math.max(...starCounts);
+  document.getElementById('starBars').innerHTML = starCounts.map((c,i)=>
+    barRow(i+1+'&nbsp;★', c/maxStar*100, c+' reviews', 'var(--accent)')).join('');
+
+  // ---- performance by class ----
+  const perfColors = {POSITIVE:'var(--pos)', NEUTRAL:'var(--neut)', NEGATIVE:'var(--neg)'};
+  document.getElementById('perfBars').innerHTML = CLASSES.map(c=>{
+    const sub=byClass(c); const parte=pcOk(c)/sub.length*100;
+    return barRow(c, parte, `${pcOk(c)}/${sub.length} · ${parte.toFixed(1)}%`, perfColors[c]);
+  }).join('');
+
+  // ---- 3-star NEUTRAL breakdown ----
+  const neut = byClass('NEUTRAL');
+  const nb = {POSITIVE:0, NEUTRAL:0, NEGATIVE:0};
+  neut.forEach(r=>nb[pred(r)]++);
+  const nbPct = c=> nb[c]/neut.length*100;
+  document.getElementById('neutBars').innerHTML =
+    barRow('POSITIVE', nbPct('POSITIVE'), `${nb.POSITIVE} (${nbPct('POSITIVE').toFixed(1)}%)`, perfColors.POSITIVE) +
+    barRow('NEUTRAL',  nbPct('NEUTRAL'),  `${nb.NEUTRAL} (${nbPct('NEUTRAL').toFixed(1)}%)`, perfColors.NEUTRAL) +
+    barRow('NEGATIVE', nbPct('NEGATIVE'), `${nb.NEGATIVE} (${nbPct('NEGATIVE').toFixed(1)}%)`, perfColors.NEGATIVE);
+
+  // ---- confusion matrix ----
+  const conf = {}; CLASSES.forEach(a=>{conf[a]={};CLASSES.forEach(b=>conf[a][b]=0);});
+  ROWS.forEach(r=>conf[cls(r)][pred(r)]++);
+  let cmHtml = '';
+  CLASSES.forEach(cr=>{
+    cmHtml += `<tr><td class="rl">${cr}</td>` + CLASSES.map(cp=>{
+      const v=conf[cr][cp];
+      let k = (cr===cp)?(v>0?'cm-ok':'cm-soft'):(v>0?'cm-err':'cm-soft');
+      return `<td class="${k}">${v}<span class="sub">${pct(v/ROWS.filter(x=>cls(x)===cr).length)}%</span></td>`;
+    }).join('') + `</tr>`;
+  });
+  document.getElementById('cmatBody').innerHTML = cmHtml;
+  const maxNonDiag = Math.max(...CLASSES.map(cr=>CLASSES.map(cp=>cr===cp?0:conf[cr][cp])).flat());
+  const tagLine = `Largest error: NEUTRAL → NEGATIVE (${conf.NEUTRAL.NEGATIVE} of 50). Next: NEUTRAL → POSITIVE (${conf.NEUTRAL.POSITIVE}) and POSITIVE → NEUTRAL (${conf.POSITIVE.NEUTRAL}).`;
+  document.getElementById('cmTags').innerHTML = `<span class="chip ms">→ NEGATIVE ${conf.NEUTRAL.NEGATIVE}</span><span class="chip" style="background:var(--neut-bg);color:#8a6200">→ NEUTRAL ${conf.POSITIVE.NEUTRAL}</span><span class="chip" style="background:var(--pos-bg);color:var(--pos)">↔ NEUTRAL-POSITIVE ${conf.NEUTRAL.POSITIVE}</span>`;
+
+  // ---- imbalanced vs balanced ----
+  const s6acc = pct(acc), s6d = `POSITIVE ${byClass('POSITIVE').length} / NEUTRAL ${byClass('NEUTRAL').length} / NEGATIVE ${byClass('NEGATIVE').length}`;
+  document.getElementById('s2acc').textContent = SRC.step2.acc_pct + '%';
+  document.getElementById('s2dist').textContent = `${SRC.step2.pos} POSITIVE / ${SRC.step2.neg} NEGATIVE`;
+  document.getElementById('s6acc').textContent = s6acc + '%';
+  document.getElementById('s6dist').textContent = s6d;
+
+  // ---- emotion ----
+  document.getElementById('eAgreeAll').textContent = SRC.step5.agree_all;
+  document.getElementById('eAgreeAllPct').textContent = Number(SRC.step5.agree_all_pct).toFixed(1) + '%';
+  document.getElementById('eAgreeNoNone').textContent = SRC.step5.agree_noNone;
+  document.getElementById('eAgreeNoNonePct').textContent = Number(SRC.step5.agree_noNone_pct).toFixed(1) + '%';
+  document.getElementById('eNone').textContent = SRC.step5.none;
+  document.getElementById('eJoyAnti').textContent = SRC.step5.joy_anti;
+  document.getElementById('eTies').textContent = SRC.step5.ties;
+  document.getElementById('eTiesAnti').textContent = SRC.step5.ties_to_anticipation;
+  document.getElementById('eJoyAnti2').textContent = SRC.step5.joy_anti;
+  document.getElementById('eTiebreak').textContent = SRC.step5.joy_anti_tiebreak;
+  document.getElementById('eClear').textContent = SRC.step5.joy_anti_clear;
+
+  // ---- review table + filtering ----
+  function rowEsc(r){
+    const mis = r.correct;
+    return `<tr ${mis?'':'style="background:#fbf0ee"'}><td>${r.rating}</td><td>${badge(cls(r))}</td><td>${badge(pred(r))}</td>`+
+      `<td><span class="chip ${mis?'corr':'mis'}">${mis?'CORRECT':'MISMATCH'}</span></td>`+
+      `<td class="celltext"><span class="t">${esc(r.title||'(no title)')}</span><span class="b">${esc(r.text||'(no text)')}</span></td></tr>`;
+  }
+  function applyFilters(rws,f){
+    const q=(f.q||'').trim().toLowerCase();
+    return rws.filter(r=>{
+      if(f.verdict==='Correct'&&!r.correct) return false;
+      if(f.verdict==='Mismatched'&&r.correct) return false;
+      if(f.pred!=='All'&&pred(r)!==f.pred) return false;
+      if(f.derived!=='All'&&cls(r)!==f.derived) return false;
+      if(q){const b=(r.title||'')+' '+(r.text||''); if(b.toLowerCase().indexOf(q)===-1) return false;}
+      return true;
+    });
+  }
+  function renderRows(rs){
+    document.getElementById('allTable').innerHTML =
+      `<table><thead><tr><th>Rating</th><th>Correct label</th><th>Model said</th><th>Verdict</th><th>Review</th></tr></thead><tbody>`+
+      rs.map(rowEsc).join('')+`</tbody></table>`;
+  }
+  const state = {verdict:'All', pred:'All', derived:'All', q:''};
+  function update(){ const fr=applyFilters(ROWS,state); document.getElementById('shown').textContent=fr.length; renderRows(fr); }
+  document.querySelectorAll('.filterbar .seg button').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      const g=btn.closest('.fgroup'), role=g.dataset.role;
+      if(role==='verdict') state.verdict=btn.dataset.v;
+      if(role==='pred') state.pred=btn.dataset.p;
+      if(role==='derived') state.derived=btn.dataset.d;
+      g.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b===btn));
+      update();
+    });
+  });
+  document.getElementById('kw').addEventListener('input',e=>{state.q=e.target.value;update();});
+  document.getElementById('resetBtn').addEventListener('click',()=>{
+    state.verdict='All';state.pred='All';state.derived='All';state.q='';
+    document.getElementById('kw').value='';
+    document.querySelectorAll('.filterbar .seg button').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.filterbar .seg').forEach(g=>g.querySelector('button').classList.add('active'));
+    update();
+  });
+
+  document.getElementById('totalN').textContent=N;
+  document.getElementById('okN').textContent=ok.length;
+  document.getElementById('badN').textContent=bad.length;
+
+  // ---- mismatched section (representative by type) ----
+  const misByType = {};
+  bad.forEach(r=>{ const k=cls(r)+'→'+pred(r); (misByType[k]=misByType[k]||[]).push(r); });
+  const typeLead = Object.entries(misByType).map(([k,v])=>`${v.length} ${k}`).join(' · ');
+  document.getElementById('mismatchLead').innerHTML =
+    `${bad.length} reviews did not match. ${typeLead}. Representative examples below.`;
+  let mh = `<table><thead><tr><th>Type</th><th>Rating</th><th>Correct</th><th>Model said</th><th>Review</th></tr></thead><tbody>`;
+  const order = ['NEUTRAL→NEGATIVE','NEUTRAL→POSITIVE','POSITIVE→NEUTRAL','NEGATIVE→NEUTRAL'];
+  order.forEach(t=>{
+    (misByType[t]||[]).slice(0,3).forEach(r=>{
+      mh += `<tr><td><span class="chip ms">${t}</span></td><td>${r.rating}</td><td>${badge(cls(r))}</td><td>${badge(pred(r))}</td>`+
+        `<td class="celltext full"><span class="t">${esc(r.title||'(no title)')}</span><span class="b">${esc(r.text||'(no text)')}</span></td></tr>`;
+    });
+  });
+  document.getElementById('mismatchTable').innerHTML = mh + `</tbody></table>`;
+
+  // ---- footer ----
+  document.getElementById('foot').textContent =
+    `Sources of truth: outputs/step6_results.json (balanced 150) · outputs/step6_sample.json · outputs/step2_results.json (imbalanced 100) · outputs/step5_results.json (emotion, original 100). ` +
+    `Sentiment labels POSITIVE / NEUTRAL / NEGATIVE. The rating-derived correct label is used only for judging; it is never shown to the model. Emotion section is the separate Step 5 analysis on the original 100-review sample.`;
+
+  update();
+</script>
+</body>
+</html>
